@@ -1,0 +1,34 @@
+# Agent and skill files
+.agents/
+skills-lock.json
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+.angular/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Local planning / AI prompting notes
+CHALLENGE_BDEO.md
+PROMPTS.md
+EXECUTION_PLAN.md
