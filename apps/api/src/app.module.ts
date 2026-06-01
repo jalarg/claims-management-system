@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { AppController } from './app.controller';
@@ -7,7 +8,8 @@ import { ClaimsModule } from './claims/claims.module';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.MONGO_URI ?? 'mongodb://localhost:27017/claims-management-system'),
+    ConfigModule.forRoot({ isGlobal: true }),
+    MongooseModule.forRoot(process.env.MONGO_URI ?? 'mongodb://localhost:27017/claims-management'),
     ClaimsModule,
   ],
   controllers: [AppController],
