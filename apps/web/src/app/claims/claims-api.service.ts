@@ -3,7 +3,14 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from './api-config';
-import type { ApiErrorResponse, ClaimDetail, ClaimStatus, ClaimSummary } from './claims-api.types';
+import type {
+  ApiErrorResponse,
+  ClaimDetail,
+  ClaimStatus,
+  ClaimSummary,
+  CreateDamageRequest,
+  UpdateDamageRequest,
+} from './claims-api.types';
 
 @Injectable({ providedIn: 'root' })
 export class ClaimsApiService {
@@ -20,6 +27,18 @@ export class ClaimsApiService {
 
   updateClaimStatus(id: string, status: ClaimStatus): Observable<ClaimDetail> {
     return this.http.patch<ClaimDetail>(`${this.baseUrl}/${id}/status`, { status });
+  }
+
+  createDamage(claimId: string, damage: CreateDamageRequest): Observable<ClaimDetail> {
+    return this.http.post<ClaimDetail>(`${this.baseUrl}/${claimId}/damages`, damage);
+  }
+
+  updateDamage(claimId: string, damageId: string, changes: UpdateDamageRequest): Observable<ClaimDetail> {
+    return this.http.patch<ClaimDetail>(`${this.baseUrl}/${claimId}/damages/${damageId}`, changes);
+  }
+
+  deleteDamage(claimId: string, damageId: string): Observable<ClaimDetail> {
+    return this.http.delete<ClaimDetail>(`${this.baseUrl}/${claimId}/damages/${damageId}`);
   }
 
   getErrorMessage(error: unknown): string {

@@ -25,6 +25,18 @@ export interface ClaimDetail extends ClaimSummary {
   damages: Damage[];
 }
 
+export interface CreateDamageRequest {
+  part: string;
+  severity: DamageSeverity;
+  imageUrl: string;
+  price: number;
+  score: number;
+}
+
+export interface UpdateDamageRequest {
+  price?: number;
+}
+
 export interface ApiErrorResponse {
   statusCode: number;
   error: string;

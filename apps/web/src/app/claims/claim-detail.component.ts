@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { ClaimsApiService } from './claims-api.service';
-import type { ClaimDetail, ClaimStatus } from './claims-api.types';
+import type { ClaimDetail, ClaimStatus, CreateDamageRequest, DamageSeverity } from './claims-api.types';
 
 @Component({
   selector: 'app-claim-detail',
-  imports: [RouterLink],
+  imports: [ReactiveFormsModule, RouterLink],
   template: `
     <main class="page">
       <a routerLink="/claims" class="back-link">Back to claims</a>
@@ -21,7 +22,7 @@ import type { ClaimDetail, ClaimStatus } from './claims-api.types';
           <p class="eyebrow">{{ claim.status }}</p>
           <h1>{{ claim.title }}</h1>
           <p>{{ claim.description }}</p>
-          <p class="total">Total: {{ claim.totalAmount }}</p>
+          <p class="total">Total: {{ derivedTotal() }}</p>
         </header>
 
         <section class="actions" aria-label="Status transition actions">
@@ -37,7 +38,51 @@ import type { ClaimDetail, ClaimStatus } from './claims-api.types';
         }
 
         <section class="card" aria-labelledby="damage-heading">
-          <h2 id="damage-heading">Damages</h2>
+          <div class="section-heading">
+            <h2 id="damage-heading">Damages</h2>
+            @if (!canManageDamages()) {
+              <p class="notice">Damage changes are available only while claim is PENDING.</p>
+            }
+          </div>
+
+          @if (canManageDamages()) {
+            <form class="damage-form" [formGroup]="damageForm" (ngSubmit)="addDamage()" aria-label="Add damage">
+              <label>
+                Part
+                <input type="text" formControlName="part" />
+              </label>
+
+              <label>
+                Severity
+                <select formControlName="severity">
+                  @for (severity of severityOptions; track severity) {
+                    <option [value]="severity">{{ severity }}</option>
+                  }
+                </select>
+              </label>
+
+              <label>
+                Image URL
+                <input type="url" formControlName="imageUrl" />
+              </label>
+
+              <label>
+                Price
+                <input type="number" min="0.01" step="0.01" formControlName="price" />
+              </label>
+
+              <label>
+                Score
+                <input type="number" min="1" max="10" step="1" formControlName="score" />
+              </label>
+
+              <button type="submit" [disabled]="isSaving() || damageForm.invalid">Add damage</button>
+            </form>
+          }
+
+          @if (damageError()) {
+            <p class="notice error" role="alert">{{ damageError() }}</p>
+          }
 
           @if (hasDamages()) {
             <div class="table-wrap">
@@ -49,6 +94,9 @@ import type { ClaimDetail, ClaimStatus } from './claims-api.types';
                     <th scope="col">Score</th>
                     <th scope="col">Price</th>
                     <th scope="col">Image</th>
+                    @if (canManageDamages()) {
+                      <th scope="col">Actions</th>
+                    }
                   </tr>
                 </thead>
                 <tbody>
@@ -57,8 +105,30 @@ import type { ClaimDetail, ClaimStatus } from './claims-api.types';
                       <td>{{ damage.part }}</td>
                       <td>{{ damage.severity }}</td>
                       <td>{{ damage.score }}</td>
-                      <td>{{ damage.price }}</td>
+                      <td>
+                        @if (canManageDamages()) {
+                          <label class="sr-only" [for]="'price-' + damage.id">Price for {{ damage.part }}</label>
+                          <input
+                            [id]="'price-' + damage.id"
+                            class="price-input"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            [value]="damage.price"
+                            (change)="updateDamagePriceFromEvent(damage.id, $event)"
+                          />
+                        } @else {
+                          {{ damage.price }}
+                        }
+                      </td>
                       <td><a [href]="damage.imageUrl" target="_blank" rel="noreferrer">Open image</a></td>
+                      @if (canManageDamages()) {
+                        <td class="row-actions">
+                          <button type="button" class="danger" (click)="deleteDamage(damage.id)" [disabled]="isSaving()">
+                            Delete
+                          </button>
+                        </td>
+                      }
                     </tr>
                   }
                 </tbody>
@@ -112,16 +182,57 @@ import type { ClaimDetail, ClaimStatus } from './claims-api.types';
       margin-top: 0;
     }
 
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: baseline;
+      margin-bottom: 1rem;
+    }
+
     .total {
       margin-bottom: 0;
       font-weight: 800;
     }
 
-    .actions {
+    .actions,
+    .row-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.75rem;
+    }
+
+    .actions {
       margin-bottom: 1rem;
+    }
+
+    .damage-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+      gap: 0.75rem;
+      align-items: end;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      background: #f8fafc;
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.5rem;
+      font: inherit;
+      padding: 0.55rem 0.7rem;
     }
 
     button {
@@ -133,6 +244,11 @@ import type { ClaimDetail, ClaimStatus } from './claims-api.types';
       font: inherit;
       font-weight: 700;
       padding: 0.6rem 0.9rem;
+    }
+
+    button.danger {
+      border-color: #b91c1c;
+      background: #b91c1c;
     }
 
     button:disabled {
@@ -154,12 +270,17 @@ import type { ClaimDetail, ClaimStatus } from './claims-api.types';
       padding: 0.75rem;
       text-align: left;
       border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
     }
 
     th {
       color: #475569;
       font-size: 0.8rem;
       text-transform: uppercase;
+    }
+
+    .price-input {
+      max-width: 8rem;
     }
 
     .notice {
@@ -169,6 +290,18 @@ import type { ClaimDetail, ClaimStatus } from './claims-api.types';
     .error {
       color: #b91c1c;
     }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -176,14 +309,26 @@ export class ClaimDetailComponent implements OnInit {
   private readonly claimsApi = inject(ClaimsApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly formBuilder = inject(FormBuilder);
 
   readonly transitionStatuses: readonly ClaimStatus[] = ['IN_REVIEW', 'FINISHED', 'CANCELED'];
+  readonly severityOptions: readonly DamageSeverity[] = ['LOW', 'MID', 'HIGH'];
   readonly claim = signal<ClaimDetail | null>(null);
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
   readonly loadError = signal<string | null>(null);
   readonly transitionError = signal<string | null>(null);
+  readonly damageError = signal<string | null>(null);
   readonly hasDamages = computed(() => (this.claim()?.damages.length ?? 0) > 0);
+  readonly canManageDamages = computed(() => this.claim()?.status === 'PENDING');
+  readonly derivedTotal = computed(() => this.claim()?.damages.reduce((total, damage) => total + damage.price, 0) ?? 0);
+  readonly damageForm = this.formBuilder.nonNullable.group({
+    part: ['', Validators.required],
+    severity: ['MID' as DamageSeverity, Validators.required],
+    imageUrl: ['', Validators.required],
+    price: [0, [Validators.required, Validators.min(0.01)]],
+    score: [1, [Validators.required, Validators.min(1), Validators.max(10), integerValidator]],
+  });
 
   ngOnInit(): void {
     this.loadClaim();
@@ -203,12 +348,101 @@ export class ClaimDetailComponent implements OnInit {
       .updateClaimStatus(claim.id, status)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (updatedClaim) => {
-          this.claim.set(updatedClaim);
-          this.isSaving.set(false);
-        },
+        next: (updatedClaim) => this.applyClaimUpdate(updatedClaim),
         error: (error: unknown) => {
           this.transitionError.set(this.claimsApi.getErrorMessage(error));
+          this.isSaving.set(false);
+        },
+      });
+  }
+
+  addDamage(): void {
+    const claim = this.claim();
+
+    if (claim === null || !this.canManageDamages()) {
+      return;
+    }
+
+    if (this.damageForm.invalid) {
+      this.damageForm.markAllAsTouched();
+      return;
+    }
+
+    const damage = this.toCreateDamageRequest();
+
+    this.isSaving.set(true);
+    this.damageError.set(null);
+
+    this.claimsApi
+      .createDamage(claim.id, damage)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updatedClaim) => {
+          this.applyClaimUpdate(updatedClaim);
+          this.damageForm.reset({ part: '', severity: 'MID', imageUrl: '', price: 0, score: 1 });
+        },
+        error: (error: unknown) => {
+          this.damageError.set(this.claimsApi.getErrorMessage(error));
+          this.isSaving.set(false);
+        },
+      });
+  }
+
+  updateDamagePrice(damageId: string, priceValue: string): void {
+    const claim = this.claim();
+    const price = Number(priceValue);
+
+    if (claim === null || !this.canManageDamages()) {
+      return;
+    }
+
+    if (!Number.isFinite(price) || price <= 0) {
+      this.damageError.set('Damage price must be greater than 0.');
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.damageError.set(null);
+
+    this.claimsApi
+      .updateDamage(claim.id, damageId, { price })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updatedClaim) => this.applyClaimUpdate(updatedClaim),
+        error: (error: unknown) => {
+          this.damageError.set(this.claimsApi.getErrorMessage(error));
+          this.isSaving.set(false);
+        },
+      });
+  }
+
+  updateDamagePriceFromEvent(damageId: string, event: Event): void {
+    const input = event.target;
+
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
+    this.updateDamagePrice(damageId, input.value);
+  }
+
+  deleteDamage(damageId: string): void {
+    const claim = this.claim();
+
+    if (claim === null || !this.canManageDamages()) {
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.damageError.set(null);
+
+    this.claimsApi
+      .deleteDamage(claim.id, damageId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updatedClaim) => this.applyClaimUpdate(updatedClaim),
+        error: (error: unknown) => {
+          this.damageError.set(this.claimsApi.getErrorMessage(error));
           this.isSaving.set(false);
         },
       });
@@ -240,4 +474,31 @@ export class ClaimDetailComponent implements OnInit {
         },
       });
   }
+
+  private applyClaimUpdate(updatedClaim: ClaimDetail): void {
+    this.claim.set(updatedClaim);
+    this.isSaving.set(false);
+  }
+
+  private toCreateDamageRequest(): CreateDamageRequest {
+    const damage = this.damageForm.getRawValue();
+
+    return {
+      part: damage.part,
+      severity: damage.severity,
+      imageUrl: damage.imageUrl,
+      price: Number(damage.price),
+      score: Number(damage.score),
+    };
+  }
+}
+
+function integerValidator(control: AbstractControl<unknown>): ValidationErrors | null {
+  const value = control.value;
+
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  return Number.isInteger(Number(value)) ? null : { integer: true };
 }
