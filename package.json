@@ -1,0 +1,27 @@
+{
+  "name": "claims-management-system",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:api": "npm run build -w apps/api",
+    "build:web": "npm run build -w apps/web",
+    "dev:api": "npm run start:dev -w apps/api",
+    "dev:web": "npm run start -w apps/web",
+    "start:db": "docker compose up -d mongo",
+    "stop:db": "docker compose down",
+    "test": "npm run test --workspaces",
+    "test:api": "npm run test -w apps/api",
+    "test:unit:cov": "npm run test:unit:cov -w apps/api",
+    "test:integration": "npm run test:integration -w apps/api",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=24.0.0",
+    "npm": ">=10.0.0"
+  }
+}
