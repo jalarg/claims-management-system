@@ -1,0 +1,586 @@
+openapi: 3.0.3
+info:
+  title: Claims Management System API
+  version: 0.1.0
+  description: REST API contract for managing claims and their associated damages.
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+security: []
+tags:
+  - name: Claims
+    description: Claim management endpoints
+  - name: Damages
+    description: Damage management endpoints
+paths:
+  /claims:
+    post:
+      tags:
+        - Claims
+      summary: Create a claim
+      operationId: createClaim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClaimRequest'
+            examples:
+              default:
+                $ref: '#/components/examples/CreateClaimRequestExample'
+      responses:
+        '201':
+          description: Claim created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+              examples:
+                default:
+                  $ref: '#/components/examples/ClaimResponseExample'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags:
+        - Claims
+      summary: List claims
+      operationId: listClaims
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Optional claim status filter.
+          schema:
+            $ref: '#/components/schemas/ClaimStatus'
+          example: PENDING
+      responses:
+        '200':
+          description: Claims returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClaimSummary'
+              examples:
+                default:
+                  value:
+                    - id: 65f111111111111111111111
+                      title: Front bumper claim
+                      description: Customer reported vehicle front bumper damage after a parking incident.
+                      status: PENDING
+                      totalAmount: 350.5
+                      createdAt: '2026-06-01T10:00:00.000Z'
+                      updatedAt: '2026-06-01T10:15:00.000Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /claims/{id}:
+    get:
+      tags:
+        - Claims
+      summary: Get claim detail
+      operationId: getClaimById
+      parameters:
+        - $ref: '#/components/parameters/ClaimIdPath'
+      responses:
+        '200':
+          description: Claim returned with damages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+              examples:
+                default:
+                  $ref: '#/components/examples/ClaimResponseExample'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    patch:
+      tags:
+        - Claims
+      summary: Update editable claim fields
+      operationId: updateClaim
+      parameters:
+        - $ref: '#/components/parameters/ClaimIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClaimRequest'
+            examples:
+              default:
+                value:
+                  title: Updated front bumper claim
+                  description: Updated customer description with more complete information about the incident.
+      responses:
+        '200':
+          description: Claim updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+              examples:
+                default:
+                  $ref: '#/components/examples/ClaimResponseExample'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /claims/{id}/status:
+    patch:
+      tags:
+        - Claims
+      summary: Transition claim status
+      operationId: updateClaimStatus
+      parameters:
+        - $ref: '#/components/parameters/ClaimIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClaimStatusRequest'
+            examples:
+              moveToReview:
+                value:
+                  status: IN_REVIEW
+              finish:
+                value:
+                  status: FINISHED
+      responses:
+        '200':
+          description: Claim status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+              examples:
+                default:
+                  $ref: '#/components/examples/ClaimResponseExample'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+  /claims/{claimId}/damages:
+    post:
+      tags:
+        - Damages
+      summary: Add damage to a claim
+      operationId: createDamage
+      parameters:
+        - $ref: '#/components/parameters/ClaimIdPathNamedClaimId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDamageRequest'
+            examples:
+              default:
+                $ref: '#/components/examples/CreateDamageRequestExample'
+      responses:
+        '201':
+          description: Damage created and claim total recalculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+              examples:
+                default:
+                  $ref: '#/components/examples/ClaimResponseExample'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/DamageManagementNotAllowedError'
+  /claims/{claimId}/damages/{damageId}:
+    patch:
+      tags:
+        - Damages
+      summary: Update a claim damage
+      operationId: updateDamage
+      parameters:
+        - $ref: '#/components/parameters/ClaimIdPathNamedClaimId'
+        - $ref: '#/components/parameters/DamageIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDamageRequest'
+            examples:
+              default:
+                value:
+                  price: 425.75
+                  score: 8
+      responses:
+        '200':
+          description: Damage updated and claim total recalculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+              examples:
+                default:
+                  $ref: '#/components/examples/ClaimResponseExample'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/DamageManagementNotAllowedError'
+    delete:
+      tags:
+        - Damages
+      summary: Delete a claim damage
+      operationId: deleteDamage
+      parameters:
+        - $ref: '#/components/parameters/ClaimIdPathNamedClaimId'
+        - $ref: '#/components/parameters/DamageIdPath'
+      responses:
+        '200':
+          description: Damage deleted and claim total recalculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+              examples:
+                default:
+                  $ref: '#/components/examples/ClaimResponseExample'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/DamageManagementNotAllowedError'
+components:
+  parameters:
+    ClaimIdPath:
+      name: id
+      in: path
+      required: true
+      description: Claim identifier.
+      schema:
+        type: string
+      example: 65f111111111111111111111
+    ClaimIdPathNamedClaimId:
+      name: claimId
+      in: path
+      required: true
+      description: Claim identifier.
+      schema:
+        type: string
+      example: 65f111111111111111111111
+    DamageIdPath:
+      name: damageId
+      in: path
+      required: true
+      description: Damage identifier.
+      schema:
+        type: string
+      example: 65f222222222222222222222
+  schemas:
+    ClaimStatus:
+      type: string
+      enum:
+        - PENDING
+        - IN_REVIEW
+        - FINISHED
+        - CANCELED
+      example: PENDING
+    DamageSeverity:
+      type: string
+      enum:
+        - LOW
+        - MID
+        - HIGH
+      example: HIGH
+    CreateClaimRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+        - description
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Front bumper claim
+        description:
+          type: string
+          minLength: 1
+          example: Customer reported vehicle front bumper damage after a parking incident.
+    UpdateClaimRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+          example: Updated front bumper claim
+        description:
+          type: string
+          minLength: 1
+          example: Updated customer description with more complete information about the incident.
+    UpdateClaimStatusRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+    CreateDamageRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - part
+        - severity
+        - imageUrl
+        - price
+        - score
+      properties:
+        part:
+          type: string
+          minLength: 1
+          example: Front bumper
+        severity:
+          $ref: '#/components/schemas/DamageSeverity'
+        imageUrl:
+          type: string
+          minLength: 1
+          format: uri
+          example: https://example.com/images/front-bumper.jpg
+        price:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+          example: 350.5
+        score:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 7
+    UpdateDamageRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        part:
+          type: string
+          minLength: 1
+          example: Front bumper
+        severity:
+          $ref: '#/components/schemas/DamageSeverity'
+        imageUrl:
+          type: string
+          minLength: 1
+          format: uri
+          example: https://example.com/images/front-bumper-updated.jpg
+        price:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+          example: 425.75
+        score:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 8
+    Damage:
+      type: object
+      required:
+        - id
+        - part
+        - severity
+        - imageUrl
+        - price
+        - score
+      properties:
+        id:
+          type: string
+          example: 65f222222222222222222222
+        part:
+          type: string
+          example: Front bumper
+        severity:
+          $ref: '#/components/schemas/DamageSeverity'
+        imageUrl:
+          type: string
+          format: uri
+          example: https://example.com/images/front-bumper.jpg
+        price:
+          type: number
+          format: double
+          exclusiveMinimum: true
+          minimum: 0
+          example: 350.5
+        score:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 7
+    ClaimSummary:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - status
+        - totalAmount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          example: 65f111111111111111111111
+        title:
+          type: string
+          example: Front bumper claim
+        description:
+          type: string
+          example: Customer reported vehicle front bumper damage after a parking incident.
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+        totalAmount:
+          type: number
+          format: double
+          minimum: 0
+          description: Backend-owned derived total. Never accepted in request bodies.
+          example: 350.5
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-06-01T10:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-06-01T10:15:00.000Z'
+    Claim:
+      allOf:
+        - $ref: '#/components/schemas/ClaimSummary'
+        - type: object
+          required:
+            - damages
+          properties:
+            damages:
+              type: array
+              items:
+                $ref: '#/components/schemas/Damage'
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+          example: price
+        message:
+          type: string
+          example: price must be greater than 0
+    ErrorResponse:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Request validation failed
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 400
+            error: VALIDATION_ERROR
+            message: Request validation failed
+            details:
+              - field: price
+                message: price must be greater than 0
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 404
+            error: NOT_FOUND
+            message: Claim not found
+    ConflictError:
+      description: Invalid state transition
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 409
+            error: INVALID_STATE_TRANSITION
+            message: Cannot transition claim from PENDING to FINISHED
+    DamageManagementNotAllowedError:
+      description: Damage management is not allowed for the current claim status
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 409
+            error: DAMAGE_MANAGEMENT_NOT_ALLOWED
+            message: Damages can only be managed while the claim is PENDING
+    BusinessRuleError:
+      description: Business policy violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 422
+            error: BUSINESS_RULE_VIOLATION
+            message: Claims with high severity damages require a description longer than 100 characters before finishing
+  examples:
+    CreateClaimRequestExample:
+      value:
+        title: Front bumper claim
+        description: Customer reported vehicle front bumper damage after a parking incident.
+    CreateDamageRequestExample:
+      value:
+        part: Front bumper
+        severity: HIGH
+        imageUrl: https://example.com/images/front-bumper.jpg
+        price: 350.5
+        score: 7
+    ClaimResponseExample:
+      value:
+        id: 65f111111111111111111111
+        title: Front bumper claim
+        description: Customer reported vehicle front bumper damage after a parking incident.
+        status: PENDING
+        totalAmount: 350.5
+        damages:
+          - id: 65f222222222222222222222
+            part: Front bumper
+            severity: HIGH
+            imageUrl: https://example.com/images/front-bumper.jpg
+            price: 350.5
+            score: 7
+        createdAt: '2026-06-01T10:00:00.000Z'
+        updatedAt: '2026-06-01T10:15:00.000Z'
