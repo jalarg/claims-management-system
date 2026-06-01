@@ -40,7 +40,7 @@ export class ClaimsService {
 
     return this.saveExistingClaim({
       ...claim,
-      ...dto,
+      ...ClaimsService.toClaimChanges(dto),
     });
   }
 
@@ -73,7 +73,7 @@ export class ClaimsService {
     const storedClaim = await this.getExistingClaim(claimId);
     const claim = ClaimsService.toDomainClaim(storedClaim);
 
-    claim.updateDamage(damageId, dto);
+    claim.updateDamage(damageId, ClaimsService.toDamageChanges(dto));
 
     return this.saveDomainClaim(storedClaim, claim);
   }
@@ -133,5 +133,22 @@ export class ClaimsService {
     };
 
     return Claim.fromProperties(properties);
+  }
+
+  private static toClaimChanges(dto: UpdateClaimDto): UpdateClaimDto {
+    return {
+      ...(dto.title !== undefined ? { title: dto.title } : {}),
+      ...(dto.description !== undefined ? { description: dto.description } : {}),
+    };
+  }
+
+  private static toDamageChanges(dto: UpdateDamageDto): UpdateDamageDto {
+    return {
+      ...(dto.part !== undefined ? { part: dto.part } : {}),
+      ...(dto.severity !== undefined ? { severity: dto.severity } : {}),
+      ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
+      ...(dto.price !== undefined ? { price: dto.price } : {}),
+      ...(dto.score !== undefined ? { score: dto.score } : {}),
+    };
   }
 }
