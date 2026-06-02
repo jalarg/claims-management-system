@@ -40,10 +40,12 @@ import type {
         <p class="notice error" role="alert">{{ loadError() }}</p>
       } @else if (claim(); as claim) {
         <header class="page-header">
-          <p class="eyebrow">{{ claim.status }}</p>
+          <span [class]="statusBadgeClass(claim.status)">
+            {{ statusLabel(claim.status) }}
+          </span>
           <h1>{{ claim.title }}</h1>
           <p>{{ claim.description }}</p>
-          <p class="total">Total: {{ derivedTotal() }}</p>
+          <p class="total">Total: {{ formatAmount(derivedTotal()) }}</p>
         </header>
 
         @if (availableTransitionActions().length > 0) {
@@ -69,7 +71,7 @@ import type {
             <h2 id="damage-heading">Damages</h2>
             @if (!canManageDamages()) {
               <p class="notice">
-                Damage changes are available only while claim is pending.
+                Damages can only be added, edited, or deleted while the claim is pending.
               </p>
             }
           </div>
@@ -258,7 +260,7 @@ import type {
     .page {
       max-width: 64rem;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 2rem 1.25rem;
     }
 
     .back-link {
@@ -274,25 +276,59 @@ import type {
       border-radius: 1rem;
       background: #fff;
       padding: 1.25rem;
+      box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
     }
 
     .page-header {
       margin-bottom: 1rem;
     }
 
-    .eyebrow {
-      margin: 0 0 0.25rem;
-      color: #2563eb;
-      font-size: 0.8rem;
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 0.75rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.85rem;
+      padding: 0.25rem 0.55rem;
       text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .status-pending {
+      border-color: #bfdbfe;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .status-in-review {
+      border-color: #fde68a;
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .status-finished {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .status-canceled {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
     }
 
     h1,
     h2,
     p {
       margin-top: 0;
+    }
+
+    h1 {
+      letter-spacing: -0.03em;
     }
 
     .section-heading {
@@ -305,6 +341,8 @@ import type {
 
     .total {
       margin-bottom: 0;
+      color: #0f172a;
+      font-size: 1.1rem;
       font-weight: 800;
     }
 
@@ -325,6 +363,10 @@ import type {
       border: 1px solid #e2e8f0;
       border-radius: 0.75rem;
       background: #f8fafc;
+    }
+
+    .damage-form button {
+      align-self: end;
     }
 
     label {
@@ -379,6 +421,14 @@ import type {
       opacity: 0.5;
     }
 
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid rgb(37 99 235 / 0.25);
+      outline-offset: 2px;
+    }
+
     .table-wrap {
       overflow-x: auto;
     }
@@ -424,7 +474,12 @@ import type {
     th {
       color: #475569;
       font-size: 0.8rem;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
     }
 
     .price-input {
@@ -674,6 +729,28 @@ export class ClaimDetailComponent implements OnInit {
 
   getDamagePriceValue(damageId: string, fallbackPrice: number): string {
     return this.damagePriceDrafts()[damageId] ?? String(fallbackPrice);
+  }
+
+  formatAmount(amount: number): string {
+    return `$${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+
+  statusLabel(status: ClaimStatus): string {
+    return status === "IN_REVIEW" ? "In review" : status.toLowerCase();
+  }
+
+  statusBadgeClass(status: ClaimStatus): string {
+    const statusClassByStatus: Record<ClaimStatus, string> = {
+      PENDING: "status-pending",
+      IN_REVIEW: "status-in-review",
+      FINISHED: "status-finished",
+      CANCELED: "status-canceled",
+    };
+
+    return `status-badge ${statusClassByStatus[status]}`;
   }
 
   useFallbackImage(event: Event): void {

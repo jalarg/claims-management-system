@@ -17,8 +17,10 @@ export class ClaimsApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${API_BASE_URL}/claims`;
 
-  getClaims(): Observable<ClaimSummary[]> {
-    return this.http.get<ClaimSummary[]>(this.baseUrl);
+  getClaims(status?: ClaimStatus): Observable<ClaimSummary[]> {
+    const options = status ? { params: { status } } : {};
+
+    return this.http.get<ClaimSummary[]>(this.baseUrl, options);
   }
 
   getClaim(id: string): Observable<ClaimDetail> {

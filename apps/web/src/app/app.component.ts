@@ -14,7 +14,8 @@ import { RouterLink, RouterOutlet } from '@angular/router';
     .app-header {
       border-bottom: 1px solid #e2e8f0;
       background: #fff;
-      padding: 1rem 2rem;
+      box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+      padding: 1rem 1.25rem;
     }
 
     a {

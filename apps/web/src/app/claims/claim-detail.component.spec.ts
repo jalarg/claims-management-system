@@ -128,7 +128,7 @@ describe('ClaimDetailComponent', () => {
     expect(nativeElement.querySelector('.price-input')).toBeNull();
     expect(getPriceSaveButtonOrNull()).toBeNull();
     expect(nativeElement.querySelector('.row-actions')).toBeNull();
-    expect(nativeElement.textContent).toContain('Damage changes are available only while claim is pending.');
+    expect(nativeElement.textContent).toContain('Damages can only be added, edited, or deleted while the claim is pending.');
   });
 
   it('shows editable price inputs and Save buttons for PENDING claims', () => {

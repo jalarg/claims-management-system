@@ -52,7 +52,7 @@ import { ConfirmDialogService } from "./confirm-dialog.service";
       border-radius: 1rem;
       background: #fff;
       box-shadow: 0 1.5rem 4rem rgb(15 23 42 / 0.25);
-      padding: 1.25rem;
+      padding: 1.5rem;
     }
 
     h2,
@@ -64,6 +64,7 @@ import { ConfirmDialogService } from "./confirm-dialog.service";
       margin-bottom: 0.5rem;
       color: #0f172a;
       font-size: 1.25rem;
+      letter-spacing: -0.02em;
     }
 
     p {
@@ -73,6 +74,7 @@ import { ConfirmDialogService } from "./confirm-dialog.service";
 
     .actions {
       display: flex;
+      flex-wrap: wrap;
       justify-content: flex-end;
       gap: 0.75rem;
     }
@@ -84,6 +86,11 @@ import { ConfirmDialogService } from "./confirm-dialog.service";
       font: inherit;
       font-weight: 700;
       padding: 0.6rem 0.9rem;
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgb(37 99 235 / 0.25);
+      outline-offset: 2px;
     }
 
     .primary {
