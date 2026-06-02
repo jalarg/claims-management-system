@@ -83,15 +83,15 @@ npm run seed -w apps/api
 
 ## Final verification result snapshot
 
-- `nvm use`: not available in this shell (`nvm: command not found`), existing Node used.
-- Root typecheck: passed.
-- Root tests: passed.
+- `nvm use`: passed and selected Node.js `v22.12.0`.
+- Root tests: passed (`8` API suites / `79` API tests, `34` frontend specs).
 - API build: passed.
 - Web build: passed.
-- API unit coverage: statements >95% (latest run: `99.25%`).
-- API integration tests: passed.
-- Frontend tests: passed (requires Chrome/Karma availability in the execution environment).
-- Seed command: passed and inserted 4 sample claims idempotently.
+- API unit coverage: statements `99.25%`, lines `99.2%`, functions `97.5%`.
+- API integration tests: passed (`7` tests).
+- Frontend tests: passed (`34` specs; requires Chrome/Karma availability).
+- Seed command: passed and inserted `4` sample claims idempotently.
+- Served Swagger UI at `/docs/` using `docs/openapi.yaml` as the source of truth, without generating a duplicate OpenAPI contract.
 
 ## Human decisions and rejected shortcuts
 

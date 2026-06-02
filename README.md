@@ -44,6 +44,7 @@ The challenge is implemented stage-by-stage with Spec-Driven Development and Ope
 - Node.js `22.12.0` (required/recommended; aligned with `.nvmrc`)
 - npm `>=10`
 - Docker + Docker Compose
+- Chrome available locally for Angular/Karma frontend tests
 - `nvm` optional (only needed if you want `nvm use`)
 
 ## Environment setup
@@ -70,22 +71,25 @@ docker compose up -d mongo
 npm install
 ```
 
-## Run backend
+## Run backend from the repository root
 
 ```bash
 npm run dev:api
 ```
 
+API runs at: `http://localhost:3000`
 OpenAPI source file: `docs/openapi.yaml`.
 Swagger UI is available at `http://localhost:3000/docs/` when the API is running.
 
-## Run frontend
+## Run frontend from the repository root
 
 ```bash
 npm run dev:web
 ```
 
-## Optional seed command
+Frontend runs at: `http://localhost:4200`
+
+## Optional seed command from the repository root
 
 ```bash
 npm run seed -w apps/api
@@ -205,9 +209,10 @@ curl -X PATCH http://localhost:3000/claims/<CLAIM_ID>/status \
 
 ## Known limitations
 
-- UI styling is intentionally simple.
+- UI styling is intentionally lightweight and focused on the required workflows.
 - Authentication/authorization are intentionally out of scope.
 - Seed command is optional and explicit.
+- Seeded demo images use public URLs, so image previews require internet access.
 - `mongodb-memory-server` may download a MongoDB binary on first integration test run.
 
 ## Documentation references
