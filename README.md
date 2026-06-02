@@ -76,6 +76,9 @@ npm install
 npm run dev:api
 ```
 
+OpenAPI source file: `docs/openapi.yaml`.
+Swagger UI is available at `http://localhost:3000/docs/` when the API is running.
+
 ## Run frontend
 
 ```bash
