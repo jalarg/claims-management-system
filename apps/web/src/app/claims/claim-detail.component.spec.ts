@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { ClaimDetailComponent } from './claim-detail.component';
 import { ClaimsApiService } from './claims-api.service';
@@ -125,6 +125,122 @@ describe('ClaimDetailComponent', () => {
 
     expect(component.canManageDamages()).toBeFalse();
     expect(nativeElement.querySelector('.damage-form')).toBeNull();
-    expect(nativeElement.textContent).toContain('Damage changes are available only while claim is PENDING.');
+    expect(nativeElement.textContent).toContain('Damage changes are available only while claim is pending.');
   });
+
+  it('opens the cancel modal and does not call the API when rejected', async () => {
+    component.transitionError.set('Existing error');
+
+    const transition = component.transitionTo('CANCELED');
+    fixture.detectChanges();
+
+    expect(getDialog()?.textContent).toContain('Cancel claim');
+    expect(getDialog()?.textContent).toContain('Cancel this claim? This action cannot be undone.');
+
+    getDialogButton('Keep claim').click();
+    await transition;
+    fixture.detectChanges();
+
+    expect(getDialog()).toBeNull();
+    expect(claimsApi.updateClaimStatus).not.toHaveBeenCalled();
+    expect(component.isSaving()).toBeFalse();
+    expect(component.transitionError()).toBe('Existing error');
+    expect(component.claim()).toEqual(pendingClaim);
+  });
+
+  it('calls the API when cancel modal is confirmed', async () => {
+    const canceledClaim = { ...pendingClaim, status: 'CANCELED' } satisfies ClaimDetail;
+    claimsApi.updateClaimStatus.and.returnValue(of(canceledClaim));
+
+    const transition = component.transitionTo('CANCELED');
+    fixture.detectChanges();
+
+    getDialogButton('Cancel claim').click();
+    await transition;
+
+    expect(claimsApi.updateClaimStatus).toHaveBeenCalledOnceWith('claim-1', 'CANCELED');
+    expect(component.claim()).toEqual(canceledClaim);
+    expect(component.isSaving()).toBeFalse();
+  });
+
+  it('opens the finish modal and does not call the API when rejected', async () => {
+    component.claim.set({ ...claimWithDamage, status: 'IN_REVIEW' });
+
+    const transition = component.transitionTo('FINISHED');
+    fixture.detectChanges();
+
+    expect(getDialog()?.textContent).toContain('Finish claim');
+    expect(getDialog()?.textContent).toContain('Finish this claim? Damage changes will no longer be available.');
+
+    getDialogButton('Keep editing').click();
+    await transition;
+    fixture.detectChanges();
+
+    expect(getDialog()).toBeNull();
+    expect(claimsApi.updateClaimStatus).not.toHaveBeenCalled();
+    expect(component.isSaving()).toBeFalse();
+  });
+
+  it('does not ask for confirmation before starting review', async () => {
+    const inReviewClaim = { ...pendingClaim, status: 'IN_REVIEW' } satisfies ClaimDetail;
+    claimsApi.updateClaimStatus.and.returnValue(of(inReviewClaim));
+
+    await component.transitionTo('IN_REVIEW');
+    fixture.detectChanges();
+
+    expect(getDialog()).toBeNull();
+    expect(claimsApi.updateClaimStatus).toHaveBeenCalledOnceWith('claim-1', 'IN_REVIEW');
+    expect(component.claim()).toEqual(inReviewClaim);
+    expect(component.isSaving()).toBeFalse();
+  });
+
+  it('keeps backend transition errors visible when the API rejects', async () => {
+    component.claim.set({ ...claimWithDamage, status: 'IN_REVIEW' });
+    claimsApi.updateClaimStatus.and.returnValue(throwError(() => new Error('Rejected')));
+
+    const transition = component.transitionTo('FINISHED');
+    fixture.detectChanges();
+
+    getDialogButton('Finish claim').click();
+    await transition;
+
+    expect(claimsApi.updateClaimStatus).toHaveBeenCalledOnceWith('claim-1', 'FINISHED');
+    expect(component.transitionError()).toBe('Backend error');
+    expect(component.isSaving()).toBeFalse();
+  });
+
+  it('does not show status transition actions for terminal states', () => {
+    component.claim.set({ ...pendingClaim, status: 'FINISHED' });
+
+    expect(component.availableTransitionActions()).toEqual([]);
+
+    component.claim.set({ ...pendingClaim, status: 'CANCELED' });
+
+    expect(component.availableTransitionActions()).toEqual([]);
+  });
+
+  function getDialog(): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('[role="dialog"]');
+  }
+
+  function getDialogButton(label: string): HTMLButtonElement {
+    const dialog = getDialog();
+
+    if (!dialog) {
+      throw new Error('Dialog not found');
+    }
+
+    const buttons = Array.from(dialog.querySelectorAll('button'));
+    const button = buttons.find(
+      (candidate): candidate is HTMLButtonElement =>
+        candidate instanceof HTMLButtonElement &&
+        candidate.textContent?.trim() === label,
+    );
+
+    if (!button) {
+      throw new Error(`Dialog button not found: ${label}`);
+    }
+
+    return button;
+  }
 });
