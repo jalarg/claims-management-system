@@ -121,7 +121,11 @@ import type { ClaimDetail, ClaimStatus, CreateDamageRequest, DamageSeverity } fr
                           {{ damage.price }}
                         }
                       </td>
-                      <td><a [href]="damage.imageUrl" target="_blank" rel="noreferrer">Open image</a></td>
+                      <td class="image-cell">
+                        <a [href]="damage.imageUrl" target="_blank" rel="noopener noreferrer">
+                          <img class="damage-thumb" [src]="damage.imageUrl" [alt]="damage.part + ' damage image'" loading="lazy" />
+                        </a>
+                      </td>
                       @if (canManageDamages()) {
                         <td class="row-actions">
                           <button type="button" class="danger" (click)="deleteDamage(damage.id)" [disabled]="isSaving()">
@@ -249,6 +253,8 @@ import type { ClaimDetail, ClaimStatus, CreateDamageRequest, DamageSeverity } fr
     button.danger {
       border-color: #b91c1c;
       background: #b91c1c;
+      font-size: 0.85rem;
+      padding: 0.4rem 0.7rem;
     }
 
     button:disabled {
@@ -281,6 +287,22 @@ import type { ClaimDetail, ClaimStatus, CreateDamageRequest, DamageSeverity } fr
 
     .price-input {
       max-width: 8rem;
+    }
+
+    .image-cell {
+      display: grid;
+      gap: 0.35rem;
+      align-content: start;
+    }
+
+    .damage-thumb {
+      width: 72px;
+      height: 52px;
+      object-fit: cover;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.35rem;
+      background: #f8fafc;
+      display: block;
     }
 
     .notice {
