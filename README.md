@@ -1,45 +1,214 @@
 # Claims Management System
 
-## Overview
+## Project overview
 
-TODO: Describe the claims management system and its main business capabilities.
+Claims Management System is a full-stack monorepo for claim managers to track claims and associated damages.
+It enforces status transitions, business policies, and backend-derived totals while providing a minimal Angular UI for list/detail workflows.
 
-## Tech Stack
+## Challenge summary
 
-TODO: Document the final backend, frontend, database, and tooling choices.
+The challenge is implemented stage-by-stage with Spec-Driven Development and OpenAPI-first design:
 
-## Project Structure
+- backend domain rules and validation;
+- persistence and REST API;
+- backend unit/integration testing;
+- frontend list/detail views and reactive damage workflows.
 
-TODO: Document the monorepo structure once implementation starts.
+## Monorepo structure
+
+```text
+.
+├── apps/
+│   ├── api/        # NestJS backend (domain, REST API, Mongo persistence, tests, seed)
+│   └── web/        # Angular frontend (claim list/detail, reactive damage UI)
+├── docs/
+│   ├── SPEC.md
+│   └── openapi.yaml
+├── docker-compose.yml
+├── AI_LOG.md
+└── README.md
+```
+
+## Selected stack
+
+- Backend: NestJS + TypeScript + Mongoose
+- Frontend: Angular 20 + TypeScript + Reactive Forms
+- Database: MongoDB 7
+- Testing:
+  - Backend unit: Jest
+  - Backend integration: Jest + Supertest + mongodb-memory-server
+  - Frontend: Karma + Jasmine
 
 ## Prerequisites
 
-TODO: List required versions for Node.js, npm, Docker, and MongoDB setup.
+- Node.js `22.12.0` (required/recommended; aligned with `.nvmrc`)
+- npm `>=10`
+- Docker + Docker Compose
+- `nvm` optional (only needed if you want `nvm use`)
 
-## Setup
+## Environment setup
 
-TODO: Add install and environment setup instructions.
+Copy `apps/api/.env.example` to `apps/api/.env` and adjust as needed.
 
-## Development
+Required API variables:
 
-TODO: Add commands to run the API and web app locally.
+- `MONGO_URI`
+- `PORT`
+- `CORS_ORIGIN`
 
-## Testing
+Seeded demo damages use public Unsplash image URLs, so no frontend asset base URL variable is required.
 
-TODO: Add backend unit coverage and integration test commands.
+## MongoDB setup (Docker Compose)
 
-## API Documentation
+```bash
+docker compose up -d mongo
+```
 
-The API contract is defined in `docs/openapi.yaml`.
+## Install dependencies
 
-## Specification
+```bash
+npm install
+```
 
-The system specification is defined in `docs/SPEC.md`.
+## Run backend
 
-## AI Usage
+```bash
+npm run dev:api
+```
 
-AI usage and supervision notes will be documented in `AI_LOG.md`.
+## Run frontend
 
-## Submission Notes
+```bash
+npm run dev:web
+```
 
-TODO: Add final verification and coverage report notes before submission.
+## Optional seed command
+
+```bash
+npm run seed -w apps/api
+```
+
+This seeds a small idempotent demo dataset for local review.
+
+## Testing and verification commands
+
+Backend unit coverage:
+
+```bash
+npm run test:unit:cov -w apps/api -- --runInBand
+```
+
+Backend integration tests:
+
+```bash
+npm run test:integration -w apps/api -- --runInBand
+```
+
+Frontend checks:
+
+```bash
+npm run typecheck -w apps/web
+npm run test -w apps/web
+npm run build -w apps/web
+```
+
+Root verification commands:
+
+If `nvm` is available:
+
+```bash
+nvm use
+docker compose up -d mongo
+npm run typecheck
+npm test
+npm run build:api
+npm run build:web
+npm run test:unit:cov -w apps/api -- --runInBand
+npm run test:integration -w apps/api -- --runInBand
+npm run seed -w apps/api
+```
+
+If `nvm` is not installed, use Node.js `22.12.0` manually (or through another version manager), then run the same commands except `nvm use`.
+
+## API examples
+
+Create claim:
+
+```bash
+curl -X POST http://localhost:3000/claims \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Front bumper claim","description":"Customer reported vehicle front bumper damage after a parking incident."}'
+```
+
+List claims:
+
+```bash
+curl http://localhost:3000/claims
+```
+
+Get claim detail:
+
+```bash
+curl http://localhost:3000/claims/<CLAIM_ID>
+```
+
+Add damage:
+
+```bash
+curl -X POST http://localhost:3000/claims/<CLAIM_ID>/damages \
+  -H "Content-Type: application/json" \
+  -d '{"part":"Front bumper","severity":"HIGH","imageUrl":"https://example.com/front-bumper.jpg","price":350.5,"score":7}'
+```
+
+Update damage price:
+
+```bash
+curl -X PATCH http://localhost:3000/claims/<CLAIM_ID>/damages/<DAMAGE_ID> \
+  -H "Content-Type: application/json" \
+  -d '{"price":425.75}'
+```
+
+Delete damage:
+
+```bash
+curl -X DELETE http://localhost:3000/claims/<CLAIM_ID>/damages/<DAMAGE_ID>
+```
+
+Transition status:
+
+```bash
+curl -X PATCH http://localhost:3000/claims/<CLAIM_ID>/status \
+  -H "Content-Type: application/json" \
+  -d '{"status":"IN_REVIEW"}'
+```
+
+## Technical decisions
+
+- Spec-Driven Development with `docs/SPEC.md` as implementation source.
+- OpenAPI-first contract with `docs/openapi.yaml`.
+- NestJS Dependency Injection and modular feature architecture.
+- Angular Dependency Injection with `HttpClient` via service layer.
+- MongoDB persistence through Mongoose.
+- Embedded damages inside claim documents.
+- Backend-owned `totalAmount` (derived from damages).
+- Frontend reactive total derived from current damage collection and reconciled with backend responses.
+
+## Architecture and patterns
+
+- Layered modular backend architecture (`controller -> service -> repository -> persistence`).
+- State Machine Pattern for claim status transitions.
+- Policy Pattern for high-severity finish rule.
+- Repository Pattern isolating MongoDB-specific operations.
+
+## Known limitations
+
+- UI styling is intentionally simple.
+- Authentication/authorization are intentionally out of scope.
+- Seed command is optional and explicit.
+- `mongodb-memory-server` may download a MongoDB binary on first integration test run.
+
+## Documentation references
+
+- Specification: `docs/SPEC.md`
+- API contract: `docs/openapi.yaml`
+- AI supervision log: `AI_LOG.md`
