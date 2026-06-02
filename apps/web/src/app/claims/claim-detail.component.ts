@@ -179,8 +179,8 @@ import type {
                             min="0.01"
                             step="0.01"
                             [value]="damage.price"
-                            (change)="
-                              updateDamagePriceFromEvent(damage.id, $event)
+                            (input)="
+                              updateDamagePriceDraftFromEvent(damage.id, $event)
                             "
                           />
                         } @else {
@@ -218,6 +218,19 @@ import type {
 
                       @if (canManageDamages()) {
                         <td class="row-actions">
+                          <button
+                            type="button"
+                            class="secondary small"
+                            (click)="
+                              updateDamagePrice(
+                                damage.id,
+                                getDamagePriceValue(damage.id, damage.price)
+                              )
+                            "
+                            [disabled]="isSaving()"
+                          >
+                            Save
+                          </button>
                           <button
                             type="button"
                             class="danger"
@@ -350,6 +363,17 @@ import type {
       white-space: nowrap;
     }
 
+    button.secondary {
+      background: #fff;
+      color: #2563eb;
+    }
+
+    button.small {
+      font-size: 0.85rem;
+      padding: 0.4rem 0.7rem;
+      white-space: nowrap;
+    }
+
     button:disabled {
       cursor: not-allowed;
       opacity: 0.5;
@@ -431,6 +455,10 @@ import type {
       white-space: nowrap;
     }
 
+    .row-actions button + button {
+      margin-left: 0.5rem;
+    }
+
     .notice {
       color: #475569;
     }
@@ -478,6 +506,7 @@ export class ClaimDetailComponent implements OnInit {
   readonly fallbackDamageImageUrl = "/assets/damages/default-damage.svg";
   readonly severityOptions: readonly DamageSeverity[] = ["LOW", "MID", "HIGH"];
   readonly claim = signal<ClaimDetail | null>(null);
+  readonly damagePriceDrafts = signal<Record<string, string>>({});
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
   readonly loadError = signal<string | null>(null);
@@ -630,14 +659,21 @@ export class ClaimDetailComponent implements OnInit {
       });
   }
 
-  updateDamagePriceFromEvent(damageId: string, event: Event): void {
+  updateDamagePriceDraftFromEvent(damageId: string, event: Event): void {
     const input = event.target;
 
     if (!(input instanceof HTMLInputElement)) {
       return;
     }
 
-    this.updateDamagePrice(damageId, input.value);
+    this.damagePriceDrafts.update((drafts) => ({
+      ...drafts,
+      [damageId]: input.value,
+    }));
+  }
+
+  getDamagePriceValue(damageId: string, fallbackPrice: number): string {
+    return this.damagePriceDrafts()[damageId] ?? String(fallbackPrice);
   }
 
   useFallbackImage(event: Event): void {
@@ -652,6 +688,20 @@ export class ClaimDetailComponent implements OnInit {
     }
 
     image.src = this.fallbackDamageImageUrl;
+    this.disableImageLink(image);
+  }
+
+  private disableImageLink(image: HTMLImageElement): void {
+    const link = image.closest("a.image-link");
+
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    link.removeAttribute("href");
+    link.removeAttribute("target");
+    link.removeAttribute("rel");
+    link.removeAttribute("title");
   }
 
   hasDamageImageUrl(imageUrl: string): boolean {
@@ -721,6 +771,7 @@ export class ClaimDetailComponent implements OnInit {
 
   private applyClaimUpdate(updatedClaim: ClaimDetail): void {
     this.claim.set(updatedClaim);
+    this.damagePriceDrafts.set({});
     this.isSaving.set(false);
   }
 

@@ -125,7 +125,48 @@ describe('ClaimDetailComponent', () => {
 
     expect(component.canManageDamages()).toBeFalse();
     expect(nativeElement.querySelector('.damage-form')).toBeNull();
+    expect(nativeElement.querySelector('.price-input')).toBeNull();
+    expect(getPriceSaveButtonOrNull()).toBeNull();
+    expect(nativeElement.querySelector('.row-actions')).toBeNull();
     expect(nativeElement.textContent).toContain('Damage changes are available only while claim is pending.');
+  });
+
+  it('shows editable price inputs and Save buttons for PENDING claims', () => {
+    component.claim.set(claimWithDamage);
+    fixture.detectChanges();
+
+    expect(getPriceInput().value).toBe('100');
+    expect(getRowActions().contains(getPriceSaveButton())).toBeTrue();
+  });
+
+  it('saves the current price only when the row Save button is clicked', () => {
+    claimsApi.updateDamage.and.returnValue(of({
+      ...claimWithDamage,
+      totalAmount: 125,
+      damages: [{ ...claimWithDamage.damages[0], price: 125 }],
+    }));
+    component.claim.set(claimWithDamage);
+    fixture.detectChanges();
+
+    setPriceInputValue('125');
+
+    expect(claimsApi.updateDamage).not.toHaveBeenCalled();
+
+    getPriceSaveButton().click();
+
+    expect(claimsApi.updateDamage).toHaveBeenCalledOnceWith('claim-1', 'damage-1', { price: 125 });
+    expect(component.derivedTotal()).toBe(125);
+  });
+
+  it('does not save invalid prices and shows the existing damage error', () => {
+    component.claim.set(claimWithDamage);
+    fixture.detectChanges();
+
+    setPriceInputValue('-1');
+    getPriceSaveButton().click();
+
+    expect(claimsApi.updateDamage).not.toHaveBeenCalled();
+    expect(component.damageError()).toBe('Damage price must be greater than 0.');
   });
 
   it('uses the damage image URL as the initial thumbnail source', () => {
@@ -144,6 +185,8 @@ describe('ClaimDetailComponent', () => {
     thumbnail.dispatchEvent(new Event('error'));
 
     expect(thumbnail.src.endsWith(component.fallbackDamageImageUrl)).toBeTrue();
+    expect(getDamageImageLink().hasAttribute('href')).toBeFalse();
+    expect(getDamageImageLink().hasAttribute('target')).toBeFalse();
   });
 
   it('does not loop if the default fallback image fails to load', () => {
@@ -303,6 +346,55 @@ describe('ClaimDetailComponent', () => {
     }
 
     return link;
+  }
+
+  function getPriceInput(): HTMLInputElement {
+    const input = (fixture.nativeElement as HTMLElement).querySelector('.price-input');
+
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('Price input not found');
+    }
+
+    return input;
+  }
+
+  function setPriceInputValue(value: string): void {
+    const input = getPriceInput();
+
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  function getPriceSaveButton(): HTMLButtonElement {
+    const button = getPriceSaveButtonOrNull();
+
+    if (!button) {
+      throw new Error('Price Save button not found');
+    }
+
+    return button;
+  }
+
+  function getPriceSaveButtonOrNull(): HTMLButtonElement | null {
+    const buttons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    );
+
+    return buttons.find(
+      (candidate): candidate is HTMLButtonElement =>
+        candidate instanceof HTMLButtonElement &&
+        candidate.textContent?.trim() === 'Save',
+    ) ?? null;
+  }
+
+  function getRowActions(): HTMLElement {
+    const rowActions = (fixture.nativeElement as HTMLElement).querySelector('.row-actions');
+
+    if (!(rowActions instanceof HTMLElement)) {
+      throw new Error('Row actions not found');
+    }
+
+    return rowActions;
   }
 
   function getDialogButton(label: string): HTMLButtonElement {
