@@ -3,6 +3,7 @@ import type { ArgumentMetadata } from '@nestjs/common';
 
 import { createApiValidationPipe } from '../../common/pipes/api-validation.pipe';
 import { DamageSeverity } from '../domain';
+import { CreateDamageDto } from './create-damage.dto';
 import { UpdateClaimDto } from './update-claim.dto';
 import { UpdateDamageDto } from './update-damage.dto';
 
@@ -15,6 +16,12 @@ const updateClaimMetadata = {
 const updateDamageMetadata = {
   type: 'body',
   metatype: UpdateDamageDto,
+  data: '',
+} satisfies ArgumentMetadata;
+
+const createDamageMetadata = {
+  type: 'body',
+  metatype: CreateDamageDto,
   data: '',
 } satisfies ArgumentMetadata;
 
@@ -82,6 +89,29 @@ describe('Update DTO validation', () => {
       severity: DamageSeverity.Low,
       imageUrl: 'https://example.com/door.jpg',
       price: 125,
+      score: 5,
+    });
+  });
+
+  it('transforms numeric create damage fields before validation', async () => {
+    const pipe = createApiValidationPipe();
+
+    const result = await pipe.transform(
+      {
+        part: 'Door',
+        severity: DamageSeverity.Low,
+        imageUrl: 'https://example.com/door.jpg',
+        price: '125.5',
+        score: '5',
+      },
+      createDamageMetadata,
+    );
+
+    expect(result).toEqual({
+      part: 'Door',
+      severity: DamageSeverity.Low,
+      imageUrl: 'https://example.com/door.jpg',
+      price: 125.5,
       score: 5,
     });
   });

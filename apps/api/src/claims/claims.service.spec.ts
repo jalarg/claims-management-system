@@ -102,6 +102,16 @@ describe('ClaimsService', () => {
     expect(repository.save).toHaveBeenCalledWith({ ...storedClaim, title: 'Updated claim' });
   });
 
+  it('updates claim description without overwriting an omitted title', async () => {
+    repository.findById.mockResolvedValue(storedClaim);
+
+    const result = await service.updateClaim(storedClaim.id, { description: 'Updated description' });
+
+    expect(result.title).toBe(storedClaim.title);
+    expect(result.description).toBe('Updated description');
+    expect(repository.save).toHaveBeenCalledWith({ ...storedClaim, description: 'Updated description' });
+  });
+
   it('throws 404 when saving a concurrently removed claim', async () => {
     repository.findById.mockResolvedValue(storedClaim);
     repository.save.mockResolvedValue(null);
@@ -167,6 +177,26 @@ describe('ClaimsService', () => {
 
     expect(result.totalAmount).toBe(425);
     expect(result.damages[0].price).toBe(425);
+  });
+
+  it('updates non-price damage fields without overwriting an omitted price', async () => {
+    repository.findById.mockResolvedValue({ ...storedClaim, damages: [damage], totalAmount: 300 });
+
+    const result = await service.updateDamage(storedClaim.id, damage.id, {
+      part: 'Rear door',
+      severity: DamageSeverity.High,
+      imageUrl: 'https://example.com/rear-door.jpg',
+      score: 9,
+    });
+
+    expect(result.totalAmount).toBe(300);
+    expect(result.damages[0]).toEqual({
+      ...damage,
+      part: 'Rear door',
+      severity: DamageSeverity.High,
+      imageUrl: 'https://example.com/rear-door.jpg',
+      score: 9,
+    });
   });
 
   it('deletes damage through the domain model and recalculates totalAmount', async () => {
