@@ -128,6 +128,58 @@ describe('ClaimDetailComponent', () => {
     expect(nativeElement.textContent).toContain('Damage changes are available only while claim is pending.');
   });
 
+  it('uses the damage image URL as the initial thumbnail source', () => {
+    component.claim.set(claimWithDamage);
+    fixture.detectChanges();
+
+    expect(getDamageThumbnail().src).toBe('https://example.com/front-bumper.jpg');
+  });
+
+  it('uses the default fallback image when the damage thumbnail fails to load', () => {
+    component.claim.set(claimWithDamage);
+    fixture.detectChanges();
+
+    const thumbnail = getDamageThumbnail();
+
+    thumbnail.dispatchEvent(new Event('error'));
+
+    expect(thumbnail.src.endsWith(component.fallbackDamageImageUrl)).toBeTrue();
+  });
+
+  it('does not loop if the default fallback image fails to load', () => {
+    component.claim.set(claimWithDamage);
+    fixture.detectChanges();
+
+    const thumbnail = getDamageThumbnail();
+    thumbnail.src = component.fallbackDamageImageUrl;
+
+    thumbnail.dispatchEvent(new Event('error'));
+
+    expect(thumbnail.src.endsWith(component.fallbackDamageImageUrl)).toBeTrue();
+  });
+
+  it('keeps valid damage image thumbnails linked to the original image URL', () => {
+    component.claim.set(claimWithDamage);
+    fixture.detectChanges();
+
+    const link = getDamageImageLink();
+
+    expect(link.href).toBe('https://example.com/front-bumper.jpg');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toBe('noopener noreferrer');
+  });
+
+  it('shows the fallback image without a link when the local damage image URL is invalid', () => {
+    component.claim.set({
+      ...claimWithDamage,
+      damages: [{ ...claimWithDamage.damages[0], imageUrl: '' }],
+    });
+    fixture.detectChanges();
+
+    expect(getDamageThumbnail().src.endsWith(component.fallbackDamageImageUrl)).toBeTrue();
+    expect(getDamageImageLinkOrNull()).toBeNull();
+  });
+
   it('opens the cancel modal and does not call the API when rejected', async () => {
     component.transitionError.set('Existing error');
 
@@ -221,6 +273,36 @@ describe('ClaimDetailComponent', () => {
 
   function getDialog(): HTMLElement | null {
     return (fixture.nativeElement as HTMLElement).querySelector('[role="dialog"]');
+  }
+
+  function getDamageThumbnail(): HTMLImageElement {
+    const thumbnail = (fixture.nativeElement as HTMLElement).querySelector('.damage-thumb');
+
+    if (!(thumbnail instanceof HTMLImageElement)) {
+      throw new Error('Damage thumbnail not found');
+    }
+
+    return thumbnail;
+  }
+
+  function getDamageImageLink(): HTMLAnchorElement {
+    const link = getDamageImageLinkOrNull();
+
+    if (!link) {
+      throw new Error('Damage image link not found');
+    }
+
+    return link;
+  }
+
+  function getDamageImageLinkOrNull(): HTMLAnchorElement | null {
+    const link = (fixture.nativeElement as HTMLElement).querySelector('.image-link');
+
+    if (link !== null && !(link instanceof HTMLAnchorElement)) {
+      throw new Error('Damage image link is not an anchor');
+    }
+
+    return link;
   }
 
   function getDialogButton(label: string): HTMLButtonElement {

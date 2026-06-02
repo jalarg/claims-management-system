@@ -189,20 +189,31 @@ import type {
                       </td>
 
                       <td class="image-cell">
-                        <a
-                          class="image-link"
-                          [href]="damage.imageUrl"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="View image"
-                        >
+                        @if (hasDamageImageUrl(damage.imageUrl)) {
+                          <a
+                            class="image-link"
+                            [href]="damage.imageUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="View image"
+                          >
+                            <img
+                              class="damage-thumb"
+                              [src]="damage.imageUrl"
+                              [alt]="damage.part + ' damage image'"
+                              loading="lazy"
+                              (error)="useFallbackImage($event)"
+                            />
+                          </a>
+                        } @else {
                           <img
                             class="damage-thumb"
-                            [src]="damage.imageUrl"
+                            [src]="fallbackDamageImageUrl"
                             [alt]="damage.part + ' damage image'"
                             loading="lazy"
+                            (error)="useFallbackImage($event)"
                           />
-                        </a>
+                        }
                       </td>
 
                       @if (canManageDamages()) {
@@ -464,6 +475,7 @@ export class ClaimDetailComponent implements OnInit {
 
     return status ? (this.transitionActionsByStatus[status] ?? []) : [];
   });
+  readonly fallbackDamageImageUrl = "/assets/damages/default-damage.svg";
   readonly severityOptions: readonly DamageSeverity[] = ["LOW", "MID", "HIGH"];
   readonly claim = signal<ClaimDetail | null>(null);
   readonly isLoading = signal(true);
@@ -626,6 +638,36 @@ export class ClaimDetailComponent implements OnInit {
     }
 
     this.updateDamagePrice(damageId, input.value);
+  }
+
+  useFallbackImage(event: Event): void {
+    const image = event.target;
+
+    if (!(image instanceof HTMLImageElement)) {
+      return;
+    }
+
+    if (image.src.endsWith(this.fallbackDamageImageUrl)) {
+      return;
+    }
+
+    image.src = this.fallbackDamageImageUrl;
+  }
+
+  hasDamageImageUrl(imageUrl: string): boolean {
+    const trimmedImageUrl = imageUrl.trim();
+
+    if (!trimmedImageUrl) {
+      return false;
+    }
+
+    try {
+      const url = new URL(trimmedImageUrl);
+
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
   }
 
   deleteDamage(damageId: string): void {

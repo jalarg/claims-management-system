@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="104" viewBox="0 0 144 104" role="img" aria-labelledby="title desc">
+  <title id="title">No damage image</title>
+  <desc id="desc">A neutral placeholder for a missing damage image.</desc>
+  <rect width="144" height="104" rx="10" fill="#f1f5f9" />
+  <path d="M28 62h8l8-18h48l12 18h12" fill="none" stroke="#94a3b8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="50" cy="66" r="8" fill="#cbd5e1" stroke="#64748b" stroke-width="3" />
+  <circle cx="96" cy="66" r="8" fill="#cbd5e1" stroke="#64748b" stroke-width="3" />
+  <path d="M68 43l7 9-10 3 9 8" fill="none" stroke="#b91c1c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="72" y="90" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="13" font-weight="700">No image</text>
+</svg>
